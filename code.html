@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mountain Storm - Downhill Adventure</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&amp;family=Outfit:wght@300;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#7dd3fc", // A soft sky blue
+              "background-light": "#f1f5f9",
+              "background-dark": "#0f172a",
+              "storm-base": "#1e293b",
+              "storm-haze": "#475569",
+            },
+            fontFamily: {
+              display: ["Outfit", "sans-serif"],
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "12px",
+            },
+            animation: {
+              'lightning': 'lightning 8s infinite ease-in-out',
+              'rain': 'rain 0.3s linear infinite',
+              'float': 'float 3s ease-in-out infinite',
+            },
+            keyframes: {
+              lightning: {
+                '0%, 15%, 20%, 95%, 100%': { opacity: 0 },
+                '16%, 18%': { opacity: 0.15 },
+                '17%': { opacity: 0.4 },
+              },
+              rain: {
+                '0%': { transform: 'translateY(-100%) translateX(10%) rotate(15deg)' },
+                '100%': { transform: 'translateY(100%) translateX(-10%) rotate(15deg)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-5px)' },
+              }
+            }
+          },
+        },
+      };
+    </script>
+<style>
+        .rain-layer {
+            background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%);
+            width: 1px;
+            height: 40px;
+            position: absolute;
+        }
+        .fog-gradient {
+            background: linear-gradient(to top, rgba(30, 41, 59, 1) 0%, rgba(71, 85, 105, 0.5) 40%, rgba(148, 163, 184, 0.1) 100%);
+        }
+        .cliff-shadow {
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+        }::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans min-h-screen transition-colors duration-300">
+<header class="fixed top-0 left-0 right-0 z-50 p-6 flex justify-between items-center bg-transparent">
+<div class="flex items-center space-x-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
+<span class="material-icons text-white">menu</span>
+</button>
+<div class="hidden md:block">
+<span class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Mountain Range</span>
+<h2 class="text-xl font-display font-semibold text-white">Storm Peaks</h2>
+</div>
+</div>
+<div class="flex-grow max-w-xl mx-8 relative">
+<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
+<div class="h-full bg-primary w-2/3 shadow-[0_0_10px_#7dd3fc]"></div>
+</div>
+<div class="absolute -bottom-6 left-0 right-0 flex justify-between px-1">
+<span class="text-[10px] font-bold text-white/50 tracking-tighter">START</span>
+<div class="flex items-center space-x-1">
+<span class="material-icons text-[10px] text-primary">flag</span>
+<span class="text-[10px] font-bold text-white/50 tracking-tighter">CHECKPOINT 2</span>
+</div>
+<span class="text-[10px] font-bold text-white/50 tracking-tighter">END</span>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="text-right">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 block font-bold">Meters</span>
+<span class="text-2xl font-display font-semibold text-white">4,812</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
+<span class="material-icons text-white">pause</span>
+</button>
+</div>
+</header>
+<main class="relative w-full h-screen overflow-hidden bg-slate-900 flex items-center justify-center">
+<div class="absolute inset-0 z-40 bg-white animate-lightning pointer-events-none"></div>
+<div class="absolute inset-0 z-30 pointer-events-none overflow-hidden opacity-40">
+<div class="animate-rain absolute" style="left: 10%; top: -50px;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 25%; top: -100px; animation-delay: 0.1s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 45%; top: -20px; animation-delay: 0.2s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 65%; top: -80px; animation-delay: 0.15s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 85%; top: -40px; animation-delay: 0.05s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 15%; top: 50%; animation-delay: 0.12s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 55%; top: 40%; animation-delay: 0.25s;"><div class="rain-layer"></div></div>
+<div class="animate-rain absolute" style="left: 90%; top: 60%; animation-delay: 0.08s;"><div class="rain-layer"></div></div>
+</div>
+<div class="absolute inset-0 z-0 bg-[#1e293b]">
+<div class="absolute inset-0 bg-gradient-to-b from-[#334155] via-[#1e293b] to-[#0f172a]"></div>
+<div class="absolute bottom-1/4 w-full h-1/2 opacity-30 flex items-end">
+<div class="w-1/3 h-[60%] bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+<div class="w-1/2 h-[80%] -ml-20 bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+<div class="w-2/5 h-[50%] -ml-40 bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+</div>
+<div class="absolute inset-0 fog-gradient opacity-60"></div>
+</div>
+<div class="absolute inset-0 z-10 flex items-end justify-center">
+<div class="absolute left-[-5%] bottom-[-10%] w-[60%] h-[70%] bg-[#121a2a] cliff-shadow" style="clip-path: polygon(0 0, 80% 60%, 100% 100%, 0 100%);">
+<div class="absolute top-[59%] left-[80%] w-full h-2 bg-slate-400 opacity-20 transform -rotate-12"></div>
+</div>
+<div class="absolute right-[5%] bottom-[10%] w-[40%] h-[40%] bg-[#0c1221] cliff-shadow opacity-80" style="clip-path: polygon(20% 0, 100% 40%, 100% 100%, 0 100%);"></div>
+<svg class="absolute bottom-[40%] left-0 w-full h-40 opacity-20 pointer-events-none" preserveAspectRatio="none">
+<path d="M-10 20 Q 250 100 500 40 T 1000 80" fill="transparent" stroke="white" stroke-width="1"></path>
+<circle cx="250" cy="80" fill="white" r="2"></circle>
+<circle cx="750" cy="55" fill="white" r="2"></circle>
+</svg>
+</div>
+<div class="absolute z-20 flex items-center justify-center animate-float" style="left: 45%; bottom: 35%;">
+<div class="relative w-12 h-16 group">
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-4 h-10 bg-black rounded-full"></div> 
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-black rounded-full"></div> 
+<div class="absolute bottom-0 left-0 w-16 h-1.5 bg-black rounded-full transform -rotate-12"></div> 
+<div class="absolute top-4 left-[-20px] w-12 h-2 bg-primary/80 rounded-full blur-[1px]"></div>
+</div>
+<div class="absolute -left-12 top-4 w-10 h-[1px] bg-white/30 blur-[0.5px]"></div>
+<div class="absolute -left-16 top-8 w-14 h-[1px] bg-white/20 blur-[0.5px]"></div>
+</div>
+<div class="absolute bottom-12 left-0 right-0 z-50 flex justify-center space-x-12 pointer-events-none">
+<div class="flex flex-col items-center space-y-2 group transition-all duration-300">
+<div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
+<span class="material-icons text-xl">keyboard_arrow_up</span>
+</div>
+<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Jump</span>
+</div>
+<div class="flex flex-col items-center space-y-2 group transition-all duration-300">
+<div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
+<span class="text-xs font-bold">SPACE</span>
+</div>
+<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Trick</span>
+</div>
+</div>
+</main>
+<aside class="fixed right-8 top-1/2 -translate-y-1/2 z-50 space-y-6 hidden lg:block">
+<div class="flex flex-col items-center space-y-1">
+<div class="w-1 bg-white/10 h-16 rounded-full relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full bg-primary h-1/2 shadow-[0_0_8px_#7dd3fc]"></div>
+</div>
+<span class="text-[10px] font-bold text-white/30 rotate-90 my-8">ALTITUDE</span>
+</div>
+<div class="p-4 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col space-y-4">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+<span class="material-icons text-amber-500 text-sm">auto_awesome</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block leading-tight font-bold">MULTIPLIER</span>
+<span class="text-lg font-display text-white">x4.5</span>
+</div>
+</div>
+<div class="h-px bg-white/5"></div>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-icons text-primary text-sm">speed</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block leading-tight font-bold">SPEED</span>
+<span class="text-lg font-display text-white">82 <span class="text-[10px] font-sans">km/h</span></span>
+</div>
+</div>
+</div>
+</aside>
+<div class="fixed bottom-10 left-10 z-50 flex flex-col space-y-1">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+<span class="text-[11px] font-bold text-white/60 tracking-widest uppercase">Warning: Storm Front</span>
+</div>
+<span class="text-sm text-white/40 font-light max-w-xs">Visibility reduced. Lightning activity high in the upper peaks.</span>
+</div>
+
+</body></html>
