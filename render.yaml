@@ -1,103 +1,19 @@
-# Render Blueprint Configuration
+# Render Blueprint - Snowblox Game
 # https://render.com/docs/blueprint-spec
 
-databases:
-  - name: agent-k-postgres
-    plan: basic-256mb
-    databaseName: agent_k_db
-    user: agent_k
-    region: oregon
-
 services:
-  # MkDocs Documentation Site (Static)
   - type: web
-    name: agent-k-docs
+    name: snowblox
+    runtime: static
     branch: main
     region: oregon
-    runtime: static
-    buildCommand: |
-      cd backend &&
-      pip install --upgrade pip &&
-      pip install mkdocs mkdocs-material "mkdocstrings[python]>=1.0,<2.0" &&
-      mkdocs build
-    staticPublishPath: backend/site
+    buildCommand: cp code.html index.html
+    staticPublishPath: .
     headers:
       - path: /*
         name: Cache-Control
         value: public, max-age=3600
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.0"
-
-  # FastAPI Backend
-  - type: web
-    name: agent-k-api
-    branch: main
-    plan: starter
-    region: oregon
-    runtime: python
-    buildCommand: |
-      cd backend &&
-      pip install --upgrade pip &&
-      pip install -e .
-    startCommand: |
-      cd backend &&
-      uvicorn cli:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.0"
-      # === AI MODEL API KEYS ===
-      # Set these in Render Dashboard or add to agent-k-secrets group
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      # === KAGGLE API CREDENTIALS ===
-      - key: KAGGLE_USERNAME
-        sync: false
-      - key: KAGGLE_KEY
-        sync: false
-      - fromGroup: agent-k-secrets
-
-  # Next.js Frontend
-  - type: web
-    name: agent-k-frontend
-    branch: main
-    plan: starter
-    region: oregon
-    runtime: node
-    domains:
-      - agents-k.com
-      - www.agents-k.com
-    buildCommand: |
-      cd frontend &&
-      npm install -g pnpm &&
-      pnpm install --frozen-lockfile &&
-      pnpm run build
-    preDeployCommand: cd frontend && pnpm run db:migrate
-    startCommand: |
-      cd frontend &&
-      pnpm start
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
-      - key: POSTGRES_URL
-        fromDatabase:
-          name: agent-k-postgres
-          property: connectionString
-      - key: NEXT_PUBLIC_API_URL
-        value: "https://agent-k-api.onrender.com"
-      - key: PYTHON_BACKEND_URL
-        value: "https://agent-k-api.onrender.com/agentic_generative_ui/"
-      # === AUTH.JS REQUIRED VARIABLES ===
-      - key: AUTH_SECRET
-        generateValue: true
-      - key: AUTH_TRUST_HOST
-        value: "true"
-      - key: AUTH_URL
-        value: "https://agents-k.com"
-      # === AI PROVIDER API KEY ===
-      - fromGroup: agent-k-secrets
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
