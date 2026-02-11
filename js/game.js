@@ -21,6 +21,9 @@ class Game {
         this.difficulty = 1;
         this.gameMode = 'adventure'; // 'zen' or 'adventure'
         
+        // High scores
+        this.highScores = this.loadHighScores();
+        
         // Rider customization
         this.riderColor = '#FF6B35';
         this.scarfColor = '#F7931E';
@@ -399,13 +402,17 @@ class Game {
             
             if (incompletedFlip && this.gameMode === 'adventure') {
                 this.crash();
-            } else {
-                const landingScore = this.trickSystem.land();
-                if (landingScore > 0) {
-                    this.score += landingScore;
-                    this.showTrickNotification(landingScore);
+        } else {
+            const landingScore = this.trickSystem.land();
+            if (landingScore > 0) {
+                this.score += landingScore;
+                this.showTrickNotification(landingScore);
+                // Screen shake on hard landing
+                if (this.skier.airTime > 1.5) {
+                    this.renderer.triggerShake(5 + Math.min(10, this.skier.airTime * 2));
                 }
             }
+        }
         } else if (collision.type === 'ramp') {
             this.skier.hitRamp(collision.angle, collision.boost);
             this.skier.landingInvincibility = 1.0;
@@ -429,7 +436,35 @@ class Game {
     
     crash() {
         this.gameOver = true;
+        this.renderer.triggerShake(15); // Screen shake on crash
         this.showGameOver();
+    }
+    
+    loadHighScores() {
+        try {
+            const saved = localStorage.getItem('alpineOdyssey_highScores');
+            return saved ? JSON.parse(saved) : { adventure: 0, zen: 0 };
+        } catch (e) {
+            return { adventure: 0, zen: 0 };
+        }
+    }
+    
+    saveHighScores() {
+        try {
+            localStorage.setItem('alpineOdyssey_highScores', JSON.stringify(this.highScores));
+        } catch (e) {
+            console.log('Could not save high scores');
+        }
+    }
+    
+    checkAndUpdateHighScore() {
+        const currentMode = this.gameMode;
+        if (this.score > this.highScores[currentMode]) {
+            this.highScores[currentMode] = Math.round(this.score);
+            this.saveHighScores();
+            return true;
+        }
+        return false;
     }
     
     showGameOver() {
@@ -440,12 +475,25 @@ class Game {
         ];
         
         const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+        const isNewHighScore = this.checkAndUpdateHighScore();
         
         document.getElementById('endMessage').textContent = randomCompliment;
         document.getElementById('endDistance').textContent = Math.round(this.distance).toLocaleString() + 'm';
         document.getElementById('endScore').textContent = Math.round(this.score).toLocaleString();
         document.getElementById('endCombo').textContent = 'x' + this.trickSystem.maxCombo.toFixed(1);
         document.getElementById('endTricks').textContent = this.trickSystem.totalTricksLanded;
+        
+        // Show high score
+        const highScoreEl = document.getElementById('endHighScore');
+        if (highScoreEl) {
+            highScoreEl.textContent = this.highScores[this.gameMode].toLocaleString();
+            if (isNewHighScore) {
+                highScoreEl.parentElement.classList.add('text-sunset-pink');
+                highScoreEl.textContent += ' NEW!';
+            } else {
+                highScoreEl.parentElement.classList.remove('text-sunset-pink');
+            }
+        }
         
         document.getElementById('gameOverOverlay').classList.remove('hidden');
     }
@@ -506,6 +554,9 @@ class Game {
     }
     
     render() {
+        // Apply screen shake if active
+        this.renderer.applyShake();
+        
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -533,6 +584,9 @@ class Game {
                 this.currentZenMessage
             );
         }
+        
+        // Restore screen shake
+        this.renderer.restoreShake();
     }
 }
 

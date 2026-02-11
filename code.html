@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Alto's Odyssey - Snowboard Adventure</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography&v=2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
     <script>
@@ -369,9 +369,13 @@
                     <span class="text-white/60">Best Combo</span>
                     <span class="text-2xl font-display text-sunset-orange" id="endCombo">x1.0</span>
                 </div>
-                <div class="flex justify-between items-center py-2">
+                <div class="flex justify-between items-center py-2 border-b border-white/10">
                     <span class="text-white/60">Tricks Landed</span>
                     <span class="text-2xl font-display text-white" id="endTricks">0</span>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                    <span class="text-white/60">High Score</span>
+                    <span class="text-2xl font-display text-aurora-teal" id="endHighScore">0</span>
                 </div>
             </div>
             <div class="flex gap-3">
@@ -392,6 +396,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/game.js?v=12"></script>
+    <script type="module" src="js/game.js?v=13"></script>
 </body>
 </html>

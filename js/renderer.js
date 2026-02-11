@@ -58,6 +58,13 @@ export class Renderer {
         // Stars (for night time)
         this.stars = [];
         this.initStars();
+        
+        // Screen shake effect
+        this.shakeIntensity = 0;
+        this.shakeDecay = 3;
+        
+        // Aurora effect
+        this.auroraOffset = 0;
     }
     
     setRiderColors(color, scarf) {
@@ -92,14 +99,15 @@ export class Renderer {
     
     initParticles() {
         // Snow/atmospheric particles
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 80; i++) {
             this.atmosphericParticles.push({
                 x: Math.random() * this.width,
                 y: Math.random() * this.height,
-                size: Math.random() * 2 + 0.5,
-                speedX: Math.random() * 30 + 20,
-                speedY: Math.random() * 10 - 5,
-                opacity: Math.random() * 0.5 + 0.2
+                size: Math.random() * 3 + 0.5,
+                speedX: Math.random() * 40 + 30,
+                speedY: Math.random() * 15 - 7,
+                opacity: Math.random() * 0.6 + 0.2,
+                drift: Math.random() * Math.PI * 2
             });
         }
     }
@@ -147,10 +155,11 @@ export class Renderer {
             }
         });
         
-        // Update particles
+        // Update particles with more dynamic movement
         this.atmosphericParticles.forEach(p => {
+            p.drift += deltaTime * 2;
             p.x -= p.speedX * deltaTime;
-            p.y += p.speedY * deltaTime;
+            p.y += p.speedY * deltaTime + Math.sin(p.drift) * 5 * deltaTime;
             
             if (p.x < -10) {
                 p.x = this.width + 10;
@@ -171,6 +180,33 @@ export class Renderer {
         this.stars.forEach(s => {
             s.twinkle += deltaTime * 2;
         });
+        
+        // Update aurora effect
+        this.auroraOffset += deltaTime * 0.5;
+        
+        // Decay screen shake
+        if (this.shakeIntensity > 0) {
+            this.shakeIntensity = Math.max(0, this.shakeIntensity - this.shakeDecay * deltaTime * 60);
+        }
+    }
+    
+    triggerShake(intensity = 10) {
+        this.shakeIntensity = intensity;
+    }
+    
+    applyShake() {
+        if (this.shakeIntensity > 0) {
+            const dx = (Math.random() - 0.5) * this.shakeIntensity;
+            const dy = (Math.random() - 0.5) * this.shakeIntensity;
+            this.ctx.save();
+            this.ctx.translate(dx, dy);
+        }
+    }
+    
+    restoreShake() {
+        if (this.shakeIntensity > 0) {
+            this.ctx.restore();
+        }
     }
     
     getCurrentPalette() {
@@ -199,21 +235,64 @@ export class Renderer {
     renderBackground() {
         const palette = this.getCurrentPalette();
         
-        // Sky gradient
+        // Sky gradient with aurora effect
         const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
         gradient.addColorStop(0, palette.skyTop);
         gradient.addColorStop(1, palette.skyBottom);
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.width, this.height);
         
-        // Stars (visible during night phase)
+        // Aurora effect during night
         const nightIntensity = this.getNightIntensity();
+        if (nightIntensity > 0.3) {
+            this.renderAurora(nightIntensity);
+        }
+        
+        // Stars (visible during night phase)
         if (nightIntensity > 0) {
             this.renderStars(nightIntensity);
         }
         
         // Wind lines
         this.renderWindLines();
+    }
+    
+    renderAurora(intensity) {
+        this.ctx.save();
+        this.ctx.globalAlpha = intensity * 0.4;
+        
+        const colors = ['#00D9C0', '#39FF14', '#7209B7'];
+        
+        colors.forEach((color, index) => {
+            const gradient = this.ctx.createLinearGradient(0, 0, this.width, 0);
+            
+            for (let i = 0; i <= 4; i++) {
+                const offset = i / 4;
+                const wave = Math.sin(this.auroraOffset + index + i) * 0.5 + 0.5;
+                gradient.addColorStop(offset, color + Math.floor(wave * 55 + 20).toString(16).padStart(2, '0'));
+            }
+            
+            this.ctx.fillStyle = gradient;
+            this.ctx.filter = 'blur(30px)';
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, this.height * 0.1 + index * 50);
+            
+            for (let x = 0; x <= this.width; x += 50) {
+                const y = this.height * 0.1 + index * 50 + 
+                         Math.sin((x * 0.003) + this.auroraOffset + index) * 80 +
+                         Math.sin((x * 0.007) + this.auroraOffset * 1.5) * 40;
+                this.ctx.lineTo(x, y);
+            }
+            
+            this.ctx.lineTo(this.width, this.height * 0.3 + index * 50);
+            this.ctx.lineTo(0, this.height * 0.3 + index * 50);
+            this.ctx.closePath();
+            this.ctx.fill();
+        });
+        
+        this.ctx.filter = 'none';
+        this.ctx.restore();
     }
     
     getNightIntensity() {
@@ -259,7 +338,7 @@ export class Renderer {
         
         this.mountainLayers.forEach((layer, index) => {
             const color = colors[index];
-            const alpha = 0.3 + index * 0.35;
+            const alpha = 0.25 + index * 0.3;
             
             this.ctx.save();
             this.ctx.globalAlpha = alpha;
@@ -292,6 +371,12 @@ export class Renderer {
             this.ctx.lineTo(this.width * 2, this.height);
             this.ctx.closePath();
             this.ctx.fill();
+            
+            // Add subtle rim lighting on mountain edges
+            this.ctx.strokeStyle = palette.accent;
+            this.ctx.lineWidth = 1;
+            this.ctx.globalAlpha = alpha * 0.3;
+            this.ctx.stroke();
             
             this.ctx.restore();
         });
@@ -373,9 +458,12 @@ export class Renderer {
             this.ctx.fill();
             this.ctx.stroke();
             
-            // Highlight
-            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            this.ctx.lineWidth = 1;
+            // Highlight with glow effect
+            this.ctx.strokeStyle = palette.accent;
+            this.ctx.lineWidth = 3;
+            this.ctx.shadowColor = palette.accent;
+            this.ctx.shadowBlur = 10;
+            this.ctx.globalAlpha = 0.5;
             this.ctx.beginPath();
             this.ctx.moveTo(ramp.x + 5, ramp.y);
             this.ctx.quadraticCurveTo(
@@ -385,6 +473,8 @@ export class Renderer {
                 ramp.y - ramp.height * 0.6
             );
             this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+            this.ctx.globalAlpha = 1;
             
             this.ctx.restore();
         });
@@ -509,8 +599,12 @@ export class Renderer {
             this.ctx.restore();
         }
         
-        // Body (silhouette)
-        this.ctx.fillStyle = '#0D0221';
+        // Outer glow for contrast against dark backgrounds
+        this.ctx.shadowColor = this.riderColor;
+        this.ctx.shadowBlur = 15;
+        
+        // Body (silhouette) - slightly lighter for better visibility
+        this.ctx.fillStyle = '#1A0F2E';
         
         // Head
         this.ctx.beginPath();
@@ -523,7 +617,7 @@ export class Renderer {
         this.ctx.fill();
         
         // Arms
-        this.ctx.strokeStyle = '#0D0221';
+        this.ctx.strokeStyle = '#1A0F2E';
         this.ctx.lineWidth = 4;
         this.ctx.lineCap = 'round';
         this.ctx.beginPath();
@@ -532,6 +626,9 @@ export class Renderer {
         this.ctx.moveTo(6, -6);
         this.ctx.lineTo(14, 2);
         this.ctx.stroke();
+        
+        // Reset shadow for scarf
+        this.ctx.shadowBlur = 0;
         
         // Animated scarf (flows behind based on speed)
         const time = Date.now() / 1000;
@@ -549,8 +646,10 @@ export class Renderer {
         }
         this.ctx.stroke();
         
-        // Snowboard (silhouette with accent)
-        this.ctx.fillStyle = '#0D0221';
+        // Snowboard with glow
+        this.ctx.shadowColor = this.riderColor;
+        this.ctx.shadowBlur = 10;
+        this.ctx.fillStyle = '#1A0F2E';
         this.ctx.strokeStyle = this.riderColor;
         this.ctx.lineWidth = 2;
         
@@ -558,6 +657,8 @@ export class Renderer {
         this.ctx.roundRect(-20, 10, 40, 6, 3);
         this.ctx.fill();
         this.ctx.stroke();
+        
+        this.ctx.shadowBlur = 0;
         
         // Speed lines when moving fast
         if (Math.abs(skier.velocity.y) > 150) {
@@ -592,10 +693,20 @@ export class Renderer {
         
         this.atmosphericParticles.forEach(p => {
             this.ctx.globalAlpha = p.opacity;
-            this.ctx.fillStyle = '#ffffff';
+            // Add subtle color variation based on time of day
+            const palette = this.getCurrentPalette();
+            this.ctx.fillStyle = this.timeOfDay < 0.5 ? '#ffffff' : '#FFF8DC';
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             this.ctx.fill();
+            
+            // Add glow to larger particles
+            if (p.size > 2) {
+                this.ctx.globalAlpha = p.opacity * 0.3;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         });
         
         this.ctx.restore();
