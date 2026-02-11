@@ -4,188 +4,490 @@ export class Renderer {
         this.width = width;
         this.height = height;
         
-        // Colors from the theme
+        // Time of day cycle (0-1, where 0=sunset, 0.5=night, 1=sunrise)
+        this.timeOfDay = 0;
+        this.dayCycleSpeed = 0.0005;
+        
+        // Parallax layers
+        this.parallaxOffset = 0;
+        this.mountainLayers = [];
+        this.generateMountainLayers();
+        
+        // Particle system
+        this.atmosphericParticles = [];
+        this.initParticles();
+        
+        // Colors - Alto's Odyssey inspired palette
         this.colors = {
-            primary: '#7dd3fc',
-            ground: '#334155',
-            ramp: '#475569',
-            rail: '#64748b',
-            tree: '#15803d',
-            rock: '#44403c',
-            skier: '#7dd3fc', // Default skier color
-            snow: '#ffffff'
+            sunset: {
+                skyTop: '#2D1B4E',
+                skyBottom: '#FF6B35',
+                mountain1: '#1A0F2E',
+                mountain2: '#2D1B4E',
+                mountain3: '#4A1942',
+                ground: '#0D0221',
+                accent: '#F7931E'
+            },
+            night: {
+                skyTop: '#0D0221',
+                skyBottom: '#1A0F2E',
+                mountain1: '#000000',
+                mountain2: '#0D0221',
+                mountain3: '#1A0F2E',
+                ground: '#000000',
+                accent: '#7209B7'
+            },
+            sunrise: {
+                skyTop: '#7209B7',
+                skyBottom: '#F7931E',
+                mountain1: '#1A0F2E',
+                mountain2: '#2D1B4E',
+                mountain3: '#4A1942',
+                ground: '#0D0221',
+                accent: '#FF6B35'
+            }
         };
         
-        this.skierColor = '#7dd3fc'; // Customizable skier color
+        this.riderColor = '#FF6B35';
+        this.scarfColor = '#F7931E';
+        
+        // Wind lines
+        this.windLines = [];
+        this.initWindLines();
+        
+        // Stars (for night time)
+        this.stars = [];
+        this.initStars();
     }
     
-    setSkierColor(color) {
-        this.skierColor = color;
-        this.colors.skier = color;
+    setRiderColors(color, scarf) {
+        this.riderColor = color;
+        this.scarfColor = scarf;
+    }
+    
+    generateMountainLayers() {
+        // Generate procedural mountain silhouettes
+        const layers = 3;
+        for (let layer = 0; layer < layers; layer++) {
+            const points = [];
+            const segments = 20 + layer * 10;
+            const baseHeight = this.height * (0.3 + layer * 0.15);
+            const amplitude = 50 + layer * 30;
+            
+            for (let i = 0; i <= segments; i++) {
+                const x = (i / segments) * this.width * 2;
+                const noise = Math.sin(i * 0.5 + layer) * amplitude + 
+                             Math.sin(i * 1.3 + layer * 2) * (amplitude * 0.5);
+                const y = baseHeight + noise;
+                points.push({ x, y });
+            }
+            
+            this.mountainLayers.push({
+                points,
+                speed: 0.2 + layer * 0.15,
+                offset: 0
+            });
+        }
+    }
+    
+    initParticles() {
+        // Snow/atmospheric particles
+        for (let i = 0; i < 50; i++) {
+            this.atmosphericParticles.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+                size: Math.random() * 2 + 0.5,
+                speedX: Math.random() * 30 + 20,
+                speedY: Math.random() * 10 - 5,
+                opacity: Math.random() * 0.5 + 0.2
+            });
+        }
+    }
+    
+    initWindLines() {
+        for (let i = 0; i < 8; i++) {
+            this.windLines.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height * 0.6,
+                length: Math.random() * 100 + 50,
+                speed: Math.random() * 200 + 100,
+                opacity: Math.random() * 0.3 + 0.1
+            });
+        }
+    }
+    
+    initStars() {
+        for (let i = 0; i < 100; i++) {
+            this.stars.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height * 0.5,
+                size: Math.random() * 1.5 + 0.5,
+                twinkle: Math.random() * Math.PI * 2
+            });
+        }
     }
     
     resize(width, height) {
         this.width = width;
         this.height = height;
+        this.generateMountainLayers();
+    }
+    
+    update(deltaTime, scrollSpeed) {
+        // Update time of day
+        this.timeOfDay += this.dayCycleSpeed * deltaTime;
+        if (this.timeOfDay > 1) this.timeOfDay = 0;
+        
+        // Update parallax
+        this.parallaxOffset += scrollSpeed * deltaTime;
+        this.mountainLayers.forEach(layer => {
+            layer.offset += scrollSpeed * layer.speed * deltaTime;
+            if (layer.offset > this.width) {
+                layer.offset -= this.width;
+            }
+        });
+        
+        // Update particles
+        this.atmosphericParticles.forEach(p => {
+            p.x -= p.speedX * deltaTime;
+            p.y += p.speedY * deltaTime;
+            
+            if (p.x < -10) {
+                p.x = this.width + 10;
+                p.y = Math.random() * this.height;
+            }
+        });
+        
+        // Update wind lines
+        this.windLines.forEach(w => {
+            w.x -= w.speed * deltaTime;
+            if (w.x + w.length < 0) {
+                w.x = this.width + Math.random() * 200;
+                w.y = Math.random() * this.height * 0.6;
+            }
+        });
+        
+        // Update stars twinkle
+        this.stars.forEach(s => {
+            s.twinkle += deltaTime * 2;
+        });
+    }
+    
+    getCurrentPalette() {
+        if (this.timeOfDay < 0.33) return this.colors.sunset;
+        if (this.timeOfDay < 0.66) return this.colors.night;
+        return this.colors.sunrise;
+    }
+    
+    interpolateColor(color1, color2, factor) {
+        const hex2rgb = (hex) => ({
+            r: parseInt(hex.slice(1, 3), 16),
+            g: parseInt(hex.slice(3, 5), 16),
+            b: parseInt(hex.slice(5, 7), 16)
+        });
+        
+        const c1 = hex2rgb(color1);
+        const c2 = hex2rgb(color2);
+        
+        const r = Math.round(c1.r + (c2.r - c1.r) * factor);
+        const g = Math.round(c1.g + (c2.g - c1.g) * factor);
+        const b = Math.round(c1.b + (c2.b - c1.b) * factor);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+    
+    renderBackground() {
+        const palette = this.getCurrentPalette();
+        
+        // Sky gradient
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+        gradient.addColorStop(0, palette.skyTop);
+        gradient.addColorStop(1, palette.skyBottom);
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Stars (visible during night phase)
+        const nightIntensity = this.getNightIntensity();
+        if (nightIntensity > 0) {
+            this.renderStars(nightIntensity);
+        }
+        
+        // Wind lines
+        this.renderWindLines();
+    }
+    
+    getNightIntensity() {
+        // Returns 0-1 based on how close to night time
+        if (this.timeOfDay >= 0.33 && this.timeOfDay <= 0.66) {
+            const mid = 0.495; // Middle of night
+            const dist = 1 - Math.abs(this.timeOfDay - mid) / 0.165;
+            return Math.max(0, dist);
+        }
+        return 0;
+    }
+    
+    renderStars(intensity) {
+        this.ctx.save();
+        this.stars.forEach(star => {
+            const twinkle = Math.sin(star.twinkle) * 0.3 + 0.7;
+            this.ctx.globalAlpha = intensity * twinkle;
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        this.ctx.restore();
+    }
+    
+    renderWindLines() {
+        this.ctx.save();
+        this.windLines.forEach(w => {
+            this.ctx.globalAlpha = w.opacity;
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(w.x, w.y);
+            this.ctx.lineTo(w.x + w.length, w.y);
+            this.ctx.stroke();
+        });
+        this.ctx.restore();
+    }
+    
+    renderMountains() {
+        const palette = this.getCurrentPalette();
+        const colors = [palette.mountain3, palette.mountain2, palette.mountain1];
+        
+        this.mountainLayers.forEach((layer, index) => {
+            const color = colors[index];
+            const alpha = 0.3 + index * 0.35;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = alpha;
+            this.ctx.fillStyle = color;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, this.height);
+            
+            // Draw mountain silhouette
+            const points = layer.points;
+            const offsetX = -layer.offset;
+            
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                const x = point.x + offsetX;
+                const y = point.y;
+                
+                if (i === 0) {
+                    this.ctx.lineTo(x, y);
+                } else {
+                    // Smooth curves between points
+                    const prev = points[i - 1];
+                    const prevX = prev.x + offsetX;
+                    const midX = (prevX + x) / 2;
+                    this.ctx.quadraticCurveTo(prevX, prev.y, midX, (prev.y + y) / 2);
+                    this.ctx.quadraticCurveTo(x, y, x, y);
+                }
+            }
+            
+            this.ctx.lineTo(this.width * 2, this.height);
+            this.ctx.closePath();
+            this.ctx.fill();
+            
+            this.ctx.restore();
+        });
     }
     
     renderTerrain(terrain) {
-        // Render background mountains first
-        this.renderBackgroundMountains();
+        const palette = this.getCurrentPalette();
         
-        // Always render a visible ground - use fixed position at 75% (where skier and terrain are)
+        // Render background first
+        this.renderBackground();
+        this.renderMountains();
+        
+        // Ground level
         const groundY = this.height * 0.75;
         
-        // Fill below ground with bright white snow
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillRect(0, groundY, this.width, this.height - groundY);
+        // Render dunes/ground with smooth curves
+        this.ctx.save();
+        this.ctx.fillStyle = palette.ground;
         
-        // Add subtle shading for depth
-        const gradient = this.ctx.createLinearGradient(0, groundY, 0, groundY + 80);
-        gradient.addColorStop(0, 'rgba(200, 220, 240, 0)');
-        gradient.addColorStop(1, 'rgba(150, 180, 210, 0.4)');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, groundY, this.width, 80);
-        
-        // Draw single clean ground line
-        this.ctx.strokeStyle = '#94a3b8';
-        this.ctx.lineWidth = 3;
         this.ctx.beginPath();
-        this.ctx.moveTo(0, groundY);
-        this.ctx.lineTo(this.width, groundY);
-        this.ctx.stroke();
+        this.ctx.moveTo(0, this.height);
+        this.ctx.lineTo(0, groundY);
         
-        // Render ramps
-        const ramps = terrain.getRamps();
-        for (const ramp of ramps) {
-            this.renderRamp(ramp);
+        // Create flowing dune shapes
+        for (let x = 0; x <= this.width; x += 50) {
+            const wave1 = Math.sin(x * 0.01 + this.parallaxOffset * 0.001) * 10;
+            const wave2 = Math.sin(x * 0.02 + this.parallaxOffset * 0.002) * 5;
+            this.ctx.lineTo(x, groundY + wave1 + wave2);
         }
         
-        // Render rails
-        const rails = terrain.getRails();
-        for (const rail of rails) {
-            this.renderRail(rail);
-        }
+        this.ctx.lineTo(this.width, this.height);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
         
-        // Render obstacles
-        const obstacles = terrain.getObstacles();
-        for (const obs of obstacles) {
-            this.renderObstacle(obs);
-        }
+        // Render game elements
+        this.renderRamps(terrain.getRamps());
+        this.renderRails(terrain.getRails());
+        this.renderObstacles(terrain.getObstacles());
+        
+        // Atmospheric particles
+        this.renderParticles();
     }
     
-    renderRamp(ramp) {
+    renderRamps(ramps) {
+        const palette = this.getCurrentPalette();
+        
+        ramps.forEach(ramp => {
+            this.ctx.save();
+            
+            // Draw ramp as a smooth dune-like shape
+            this.ctx.fillStyle = palette.ground;
+            this.ctx.strokeStyle = palette.accent;
+            this.ctx.lineWidth = 2;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(ramp.x, ramp.y);
+            
+            // Smooth curve up
+            this.ctx.quadraticCurveTo(
+                ramp.x + ramp.width * 0.3,
+                ramp.y - ramp.height * 0.3,
+                ramp.x + ramp.width * 0.6,
+                ramp.y - ramp.height * 0.8
+            );
+            
+            // Peak
+            this.ctx.lineTo(ramp.x + ramp.width, ramp.y - ramp.height);
+            
+            // Down curve
+            this.ctx.quadraticCurveTo(
+                ramp.x + ramp.width * 0.7,
+                ramp.y - ramp.height * 0.5,
+                ramp.x + ramp.width,
+                ramp.y
+            );
+            
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Highlight
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(ramp.x + 5, ramp.y);
+            this.ctx.quadraticCurveTo(
+                ramp.x + ramp.width * 0.3,
+                ramp.y - ramp.height * 0.3,
+                ramp.x + ramp.width * 0.5,
+                ramp.y - ramp.height * 0.6
+            );
+            this.ctx.stroke();
+            
+            this.ctx.restore();
+        });
+    }
+    
+    renderRails(rails) {
+        const palette = this.getCurrentPalette();
+        
+        rails.forEach(rail => {
+            this.ctx.save();
+            
+            // Draw ruins/ancient structure style
+            this.ctx.fillStyle = 'rgba(60, 40, 60, 0.8)';
+            
+            // Support pillars
+            const numSupports = Math.floor(rail.length / 80);
+            for (let i = 0; i <= numSupports; i++) {
+                const x = rail.x + (rail.length * i / numSupports);
+                const width = 6;
+                const height = rail.height;
+                
+                // Tapered pillar
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - width/2, rail.y);
+                this.ctx.lineTo(x + width/2, rail.y);
+                this.ctx.lineTo(x + width/3, rail.y - height);
+                this.ctx.lineTo(x - width/3, rail.y - height);
+                this.ctx.closePath();
+                this.ctx.fill();
+            }
+            
+            // Rail top
+            this.ctx.fillStyle = 'rgba(100, 80, 100, 0.9)';
+            this.ctx.fillRect(rail.x, rail.y - 4, rail.length, 4);
+            
+            this.ctx.restore();
+        });
+    }
+    
+    renderObstacles(obstacles) {
+        const palette = this.getCurrentPalette();
+        
+        obstacles.forEach(obs => {
+            const topY = obs.y - obs.height;
+            
+            if (obs.type === 'tree') {
+                this.renderSilhouetteTree(obs.x, obs.y, obs.width, obs.height);
+            } else {
+                this.renderSilhouetteRock(obs.x, obs.y, obs.width, obs.height);
+            }
+        });
+    }
+    
+    renderSilhouetteTree(x, y, width, height) {
         this.ctx.save();
+        this.ctx.fillStyle = '#0D0221';
         
-        // Draw ramp as a side-view slope (Sneaky Sasquatch style)
-        this.ctx.fillStyle = '#64748b';
-        this.ctx.strokeStyle = this.colors.primary;
-        this.ctx.lineWidth = 2;
+        // Multiple layers of foliage for silhouette effect
+        const layers = 3;
+        for (let i = 0; i < layers; i++) {
+            const layerY = y - (height * (i + 1) / layers) * 0.7;
+            const layerWidth = width * (1.5 - i * 0.3);
+            const layerHeight = height * 0.4;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + width/2 - layerWidth/2, y - i * height * 0.25);
+            this.ctx.quadraticCurveTo(
+                x + width/2,
+                layerY - layerHeight,
+                x + width/2 + layerWidth/2,
+                y - i * height * 0.25
+            );
+            this.ctx.closePath();
+            this.ctx.fill();
+        }
         
-        // Draw ramp as a triangle slope going up from left to right
-        this.ctx.beginPath();
-        this.ctx.moveTo(ramp.x, ramp.y); // Bottom left (ground level)
-        this.ctx.lineTo(ramp.x + ramp.width, ramp.y - ramp.height); // Top right (peak)
-        this.ctx.lineTo(ramp.x + ramp.width, ramp.y); // Bottom right
-        this.ctx.closePath();
-        
-        // Gradient for depth
-        const gradient = this.ctx.createLinearGradient(ramp.x, ramp.y, ramp.x + ramp.width, ramp.y - ramp.height);
-        gradient.addColorStop(0, '#475569');
-        gradient.addColorStop(1, '#94a3b8');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fill();
-        this.ctx.stroke();
-        
-        // Snow highlight on the slope
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.moveTo(ramp.x, ramp.y);
-        this.ctx.lineTo(ramp.x + ramp.width, ramp.y - ramp.height);
-        this.ctx.stroke();
+        // Trunk
+        this.ctx.fillRect(x + width/2 - 3, y - height * 0.3, 6, height * 0.3);
         
         this.ctx.restore();
     }
     
-    renderRail(rail) {
-        this.ctx.fillStyle = this.colors.rail;
-        this.ctx.strokeStyle = '#cbd5e1';
-        this.ctx.lineWidth = 1;
+    renderSilhouetteRock(x, y, width, height) {
+        this.ctx.save();
+        this.ctx.fillStyle = '#0D0221';
         
-        // Draw rail supports
-        const numSupports = Math.floor(rail.length / 60);
-        for (let i = 0; i <= numSupports; i++) {
-            const x = rail.x + (rail.length * i / numSupports);
-            this.ctx.fillRect(x - 2, rail.y, 4, rail.height);
-        }
+        const centerY = y - height/2;
         
-        // Draw rail bar
-        this.ctx.fillStyle = '#94a3b8';
-        this.ctx.fillRect(rail.x, rail.y - 3, rail.length, 6);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, centerY + height/4);
+        this.ctx.quadraticCurveTo(x + width/4, centerY - height/2, x + width/2, centerY - height/3);
+        this.ctx.quadraticCurveTo(x + width*0.75, centerY - height/2, x + width, centerY + height/4);
+        this.ctx.quadraticCurveTo(x + width/2, centerY + height/2, x, centerY + height/4);
+        this.ctx.closePath();
+        this.ctx.fill();
         
         // Highlight
-        this.ctx.fillStyle = '#e2e8f0';
-        this.ctx.fillRect(rail.x, rail.y - 3, rail.length, 2);
-    }
-    
-    renderObstacle(obs) {
-        // obs.y is now the BOTTOM (ground level), draw upward
-        const topY = obs.y - obs.height;
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + width/3, centerY - height/4, width/4, height/6, -0.3, 0, Math.PI * 2);
+        this.ctx.fill();
         
-        if (obs.type === 'tree') {
-            // Draw tree trunk (bottom half)
-            this.ctx.fillStyle = '#78350f';
-            this.ctx.fillRect(obs.x + obs.width/2 - 5, topY + obs.height/2, 10, obs.height/2);
-            
-            // Foliage (triangle pointing up)
-            this.ctx.fillStyle = this.colors.tree;
-            this.ctx.beginPath();
-            this.ctx.moveTo(obs.x + obs.width/2, topY); // Top point
-            this.ctx.lineTo(obs.x, topY + obs.height/2); // Bottom left
-            this.ctx.lineTo(obs.x + obs.width, topY + obs.height/2); // Bottom right
-            this.ctx.closePath();
-            this.ctx.fill();
-            
-            // Add some depth
-            this.ctx.fillStyle = '#166534';
-            this.ctx.beginPath();
-            this.ctx.moveTo(obs.x + obs.width/2, topY + 10);
-            this.ctx.lineTo(obs.x + 5, topY + obs.height/2);
-            this.ctx.lineTo(obs.x + obs.width - 5, topY + obs.height/2);
-            this.ctx.closePath();
-            this.ctx.fill();
-        } else {
-            // Draw rock (sitting on ground)
-            const centerY = obs.y - obs.height/2;
-            
-            this.ctx.fillStyle = this.colors.rock;
-            this.ctx.strokeStyle = '#292524';
-            this.ctx.lineWidth = 2;
-            
-            this.ctx.beginPath();
-            this.ctx.ellipse(
-                obs.x + obs.width/2,
-                centerY,
-                obs.width/2,
-                obs.height/2,
-                0, 0, Math.PI * 2
-            );
-            this.ctx.fill();
-            this.ctx.stroke();
-            
-            // Add highlight
-            this.ctx.fillStyle = '#78716c';
-            this.ctx.beginPath();
-            this.ctx.ellipse(
-                obs.x + obs.width/2 - 5,
-                centerY - 5,
-                obs.width/4,
-                obs.height/4,
-                0, 0, Math.PI * 2
-            );
-            this.ctx.fill();
-        }
+        this.ctx.restore();
     }
     
     renderSkier(skier) {
@@ -193,148 +495,170 @@ export class Renderer {
         this.ctx.translate(skier.x, skier.y);
         this.ctx.rotate(skier.rotation);
         
-        // Add prominent shadow so skier is always visible
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        this.ctx.shadowBlur = 15;
-        this.ctx.shadowOffsetY = 8;
+        // Silhouette style - dark figure with colored scarf
         
-        // Draw skier body - use customizable color (check global variable directly)
-        const color = window.selectedSkierColor || this.skierColor || '#7dd3fc';
-        this.ctx.fillStyle = color;
+        // Shadow
+        if (skier.isAirborne) {
+            this.ctx.save();
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctx.globalAlpha = 0.3;
+            this.ctx.fillStyle = '#000000';
+            this.ctx.beginPath();
+            this.ctx.ellipse(skier.x, this.height * 0.75 + 10, 20, 8, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        }
         
-        // Body (main)
-        this.ctx.fillRect(-10, -15, 20, 30);
+        // Body (silhouette)
+        this.ctx.fillStyle = '#0D0221';
         
         // Head
         this.ctx.beginPath();
-        this.ctx.arc(0, -20, 8, 0, Math.PI * 2);
+        this.ctx.arc(0, -18, 7, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Body
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, -2, 9, 14, 0, 0, Math.PI * 2);
         this.ctx.fill();
         
         // Arms
-        this.ctx.fillRect(-15, -8, 5, 12);
-        this.ctx.fillRect(10, -8, 5, 12);
+        this.ctx.strokeStyle = '#0D0221';
+        this.ctx.lineWidth = 4;
+        this.ctx.lineCap = 'round';
+        this.ctx.beginPath();
+        this.ctx.moveTo(-6, -6);
+        this.ctx.lineTo(-14, 2);
+        this.ctx.moveTo(6, -6);
+        this.ctx.lineTo(14, 2);
+        this.ctx.stroke();
         
-        // Skis
-        this.ctx.shadowBlur = 5;
-        this.ctx.fillStyle = '#1e3a8a';
-        this.ctx.fillRect(-22, 12, 44, 4);
+        // Animated scarf (flows behind based on speed)
+        const time = Date.now() / 1000;
+        this.ctx.strokeStyle = this.scarfColor;
+        this.ctx.lineWidth = 5;
+        this.ctx.lineCap = 'round';
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -12);
         
-        // Ski highlights
-        this.ctx.fillStyle = '#3b82f6';
-        this.ctx.fillRect(-22, 12, 44, 1);
+        const windForce = skier.isAirborne ? 2 : 1;
+        for (let i = 0; i < 5; i++) {
+            const scarfX = -8 - i * 6;
+            const scarfY = -12 + Math.sin(time * 5 + i * 0.5) * 3 * windForce + i * 2;
+            this.ctx.lineTo(scarfX, scarfY);
+        }
+        this.ctx.stroke();
         
-        // Add highlight to show movement
-        if (skier.isAirborne) {
-            this.ctx.shadowBlur = 0;
-            this.ctx.strokeStyle = color;
-            this.ctx.lineWidth = 2;
-            this.ctx.globalAlpha = 0.6;
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, 30, 0, Math.PI * 2);
-            this.ctx.stroke();
-            
-            // Speed lines when airborne
-            this.ctx.globalAlpha = 0.4;
-            this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 2;
+        // Snowboard (silhouette with accent)
+        this.ctx.fillStyle = '#0D0221';
+        this.ctx.strokeStyle = this.riderColor;
+        this.ctx.lineWidth = 2;
+        
+        this.ctx.beginPath();
+        this.ctx.roundRect(-20, 10, 40, 6, 3);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Speed lines when moving fast
+        if (Math.abs(skier.velocity.y) > 150) {
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            this.ctx.lineWidth = 1;
             for (let i = 0; i < 3; i++) {
                 this.ctx.beginPath();
-                this.ctx.moveTo(-35 - i * 10, -5 + i * 5);
-                this.ctx.lineTo(-45 - i * 10, -5 + i * 5);
+                this.ctx.moveTo(-25 - i * 8, -5 + i * 3);
+                this.ctx.lineTo(-35 - i * 8, -5 + i * 3);
                 this.ctx.stroke();
             }
         }
         
-        // Add glow effect on jacket
-        this.ctx.shadowBlur = 0;
-        this.ctx.globalAlpha = 0.5;
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(-10, -8, 20, 4);
+        // Trick rotation indicator
+        if (skier.isFlipping) {
+            this.ctx.strokeStyle = this.scarfColor;
+            this.ctx.lineWidth = 2;
+            this.ctx.globalAlpha = 0.5;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+            this.ctx.globalAlpha = 1;
+        }
         
         this.ctx.restore();
     }
     
-    renderTrickText(x, y, tricks) {
+    renderParticles() {
+        this.ctx.save();
+        
+        this.atmosphericParticles.forEach(p => {
+            this.ctx.globalAlpha = p.opacity;
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        
+        this.ctx.restore();
+    }
+    
+    renderTrickText(x, y, tricks, comboMultiplier) {
         if (tricks.length === 0) return;
         
         this.ctx.save();
-        this.ctx.font = 'bold 24px "Outfit", sans-serif';
+        
+        // Draw trick names with glow
+        const trickNames = tricks.map(t => t.name).join(' + ');
+        
+        this.ctx.font = 'bold 28px Cinzel, serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'bottom';
         
-        // Draw trick names
-        const trickNames = tricks.map(t => t.name).join(' + ');
-        
-        // Glowing effect
-        this.ctx.shadowColor = this.colors.primary;
-        this.ctx.shadowBlur = 10;
+        // Glow effect
+        this.ctx.shadowColor = this.riderColor;
+        this.ctx.shadowBlur = 20;
         
         // Text shadow
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillText(trickNames, x + 2, y + 2);
         
         // Main text
-        this.ctx.shadowBlur = 15;
-        this.ctx.fillStyle = this.colors.primary;
+        this.ctx.fillStyle = '#ffffff';
         this.ctx.fillText(trickNames, x, y);
         
         // Show pending score
         const pendingScore = tricks.reduce((sum, t) => sum + t.points, 0);
-        this.ctx.font = 'bold 18px "Inter", sans-serif';
-        this.ctx.shadowColor = '#fbbf24';
-        this.ctx.fillStyle = '#fbbf24';
-        this.ctx.fillText(`+${pendingScore}`, x, y - 30);
+        this.ctx.font = 'bold 20px Lato, sans-serif';
+        this.ctx.shadowColor = '#F7931E';
+        this.ctx.fillStyle = '#F7931E';
+        this.ctx.fillText(`+${pendingScore}`, x, y - 35);
         
-        this.ctx.restore();
-    }
-    
-    renderParticles(skier) {
-        this.ctx.save();
-        
-        for (const particle of skier.particles) {
-            this.ctx.globalAlpha = particle.life;
-            this.ctx.fillStyle = this.colors.snow;
-            
-            this.ctx.beginPath();
-            this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            this.ctx.fill();
+        // Show combo if active
+        if (comboMultiplier > 1) {
+            this.ctx.font = 'bold 16px Lato, sans-serif';
+            this.ctx.fillStyle = this.scarfColor;
+            this.ctx.fillText(`x${comboMultiplier.toFixed(1)}`, x + 60, y - 35);
         }
         
         this.ctx.restore();
     }
     
-    renderBackgroundMountains() {
-        // Draw distant mountains in the background
-        this.ctx.fillStyle = 'rgba(100, 120, 140, 0.3)';
-        
-        // Mountain 1 (left)
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, this.height * 0.75);
-        this.ctx.lineTo(this.width * 0.3, this.height * 0.35);
-        this.ctx.lineTo(this.width * 0.5, this.height * 0.75);
-        this.ctx.fill();
-        
-        // Mountain 2 (center)
-        this.ctx.fillStyle = 'rgba(80, 100, 120, 0.4)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.width * 0.3, this.height * 0.75);
-        this.ctx.lineTo(this.width * 0.5, this.height * 0.3);
-        this.ctx.lineTo(this.width * 0.7, this.height * 0.75);
-        this.ctx.fill();
-        
-        // Mountain 3 (right)
-        this.ctx.fillStyle = 'rgba(60, 80, 100, 0.5)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.width * 0.6, this.height * 0.75);
-        this.ctx.lineTo(this.width * 0.85, this.height * 0.4);
-        this.ctx.lineTo(this.width, this.height * 0.75);
-        this.ctx.fill();
+    renderZenMessage(x, y, message) {
+        this.ctx.save();
+        this.ctx.font = 'italic 24px Cinzel, serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.fillText(message, x, y);
+        this.ctx.restore();
     }
     
-    renderUI(distance, score, speed, multiplier) {
-        // Note: Most UI is handled by HTML, but we can add canvas-based overlays here
-        
-        // Draw score popup when landing tricks
-        // This could be expanded for more visual feedback
+    getTimeOfDayInfo() {
+        if (this.timeOfDay < 0.33) {
+            return { icon: '🌅', name: 'Sunset' };
+        } else if (this.timeOfDay < 0.66) {
+            return { icon: '🌙', name: 'Night' };
+        } else {
+            return { icon: '🌄', name: 'Sunrise' };
+        }
     }
 }

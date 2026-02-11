@@ -9,14 +9,25 @@ export class Terrain {
         this.rails = [];
         this.obstacles = [];
         
-        // Horizontal scrolling (Sneaky Sasquatch style)
+        // Horizontal scrolling
         this.scrollOffset = 0;
-        this.segmentWidth = 600; // Horizontal spacing between features
+        this.segmentWidth = 600;
         this.lastGeneratedX = 0;
-        this.groundLevel = height * 0.75; // Ground at 75% down the screen
+        this.groundLevel = height * 0.75;
+        
+        // Game mode
+        this.gameMode = 'adventure'; // 'zen' or 'adventure'
+        
+        // Biome progression
+        this.biomeDistance = 0;
+        this.currentBiome = 'alpine'; // 'alpine', 'forest', 'village', 'temple'
         
         // Initialize with some terrain
         this.generateInitialTerrain();
+    }
+    
+    setGameMode(mode) {
+        this.gameMode = mode;
     }
     
     resize(width, height) {
@@ -26,16 +37,12 @@ export class Terrain {
     }
     
     generateInitialTerrain() {
-        // Start generating terrain right after the skier's position (skier is at 20% of width)
-        this.lastGeneratedX = this.width * 0.25; // Start just ahead of skier
+        this.lastGeneratedX = this.width * 0.25;
         
-        // Generate terrain that will be visible immediately
         for (let i = 0; i < 10; i++) {
             if (i < 1) {
-                // First segment clear for safe start
                 this.generateClearSegment(this.lastGeneratedX);
             } else {
-                // Then normal terrain with obstacles/ramps
                 this.generateTerrainSegment(this.lastGeneratedX);
             }
             this.lastGeneratedX += this.segmentWidth;
@@ -43,7 +50,6 @@ export class Terrain {
     }
     
     generateClearSegment(spawnX) {
-        // Just ground, no obstacles - for safe start
         this.groundSegments.push({
             x: spawnX,
             y: this.groundLevel,
@@ -53,11 +59,11 @@ export class Terrain {
     }
     
     update(deltaTime, scrollSpeed, difficulty) {
-        // Scroll terrain LEFT (right to left like Sneaky Sasquatch)
         const speed = Math.abs(scrollSpeed) * deltaTime;
         this.scrollOffset += speed;
+        this.biomeDistance += speed;
         
-        // Update all terrain elements - move LEFT (negative X)
+        // Update all terrain elements
         this.groundSegments.forEach(seg => seg.x -= speed);
         this.ramps.forEach(ramp => ramp.x -= speed);
         this.rails.forEach(rail => rail.x -= speed);
@@ -66,13 +72,12 @@ export class Terrain {
         // Remove off-screen terrain
         this.cleanupOffscreenTerrain();
         
-        // Generate new terrain on the right when needed
+        // Generate new terrain
         const rightmostRamp = this.ramps.length > 0 ? Math.max(...this.ramps.map(r => r.x)) : 0;
         const rightmostObstacle = this.obstacles.length > 0 ? Math.max(...this.obstacles.map(o => o.x)) : 0;
         const rightmostItem = Math.max(rightmostRamp, rightmostObstacle, 0);
         
         if (rightmostItem < this.width + 500) {
-            // Generate new terrain to the right
             const newX = this.width + 600;
             this.generateTerrainSegment(newX, difficulty);
         }
@@ -87,24 +92,35 @@ export class Terrain {
             angle: 0
         });
         
-        // Generate features with strategic placement (60% chance)
+        // Generate features based on game mode
         const rand = Math.random();
         
-        if (rand < 0.6) {
-            const featureType = Math.random();
-            
-            if (featureType < 0.5) {
-                // 50% chance: Ramp with obstacle after it
-                this.generateRampWithObstacle(spawnX);
-            } else if (featureType < 0.75) {
-                // 25% chance: Just a ramp (easier)
+        if (this.gameMode === 'zen') {
+            // Zen mode: Only ramps, no obstacles
+            if (rand < 0.5) {
                 this.generateRamp(spawnX);
-            } else {
-                // 25% chance: Just obstacles to avoid (jump over them)
-                this.generateObstacles(spawnX, difficulty);
+            }
+        } else {
+            // Adventure mode: Full gameplay
+            if (rand < 0.6) {
+                const featureType = Math.random();
+                
+                if (featureType < 0.4) {
+                    // 40% chance: Ramp with obstacle after it
+                    this.generateRampWithObstacle(spawnX);
+                } else if (featureType < 0.6) {
+                    // 20% chance: Just a ramp
+                    this.generateRamp(spawnX);
+                } else if (featureType < 0.75) {
+                    // 15% chance: Rail grind
+                    this.generateRail(spawnX);
+                } else if (featureType < 0.9) {
+                    // 15% chance: Obstacles to avoid
+                    this.generateObstacles(spawnX, difficulty);
+                }
+                // 10% chance: Empty segment (clear snow)
             }
         }
-        // 40% of segments will be empty - clear snow
     }
     
     generateRampWithObstacle(spawnX) {
@@ -120,17 +136,16 @@ export class Terrain {
             boost: 1.2 + Math.random() * 0.3
         });
         
-        // Place obstacle well after the ramp - give lots of landing room
-        // The skier needs space to land safely after the jump
-        const landingZone = 300; // Clear landing zone after ramp
-        const obstacleX = spawnX + rampWidth + landingZone + Math.random() * 100;
+        // Place obstacle after the ramp (landing challenge)
+        const landingZone = 250 + Math.random() * 150;
+        const obstacleX = spawnX + rampWidth + landingZone;
         
         const type = Math.random() < 0.6 ? 'tree' : 'rock';
-        const obsHeight = type === 'tree' ? 50 : 25; // Slightly smaller obstacles
+        const obsHeight = type === 'tree' ? 50 : 25;
         
         this.obstacles.push({
             x: obstacleX,
-            y: this.groundLevel, // Bottom of obstacle at ground level
+            y: this.groundLevel,
             width: type === 'tree' ? 20 : 25,
             height: obsHeight,
             type: type
@@ -167,13 +182,13 @@ export class Terrain {
         const numObstacles = Math.random() < 0.5 ? 1 : 2;
         
         for (let i = 0; i < numObstacles; i++) {
-            const offsetX = i * 80;
+            const offsetX = i * (80 + Math.random() * 40);
             const type = Math.random() < 0.6 ? 'tree' : 'rock';
-            const height = type === 'tree' ? 60 : 30;
+            const height = type === 'tree' ? 55 : 30;
             
             this.obstacles.push({
                 x: spawnX + offsetX,
-                y: this.groundLevel, // Bottom of obstacle at ground level
+                y: this.groundLevel,
                 width: type === 'tree' ? 20 : 30,
                 height: height,
                 type: type
@@ -182,7 +197,6 @@ export class Terrain {
     }
     
     cleanupOffscreenTerrain() {
-        // Remove terrain that's scrolled off the LEFT of the screen
         const threshold = -300;
         
         this.groundSegments = this.groundSegments.filter(seg => seg.x > threshold);
@@ -195,7 +209,6 @@ export class Terrain {
         const bounds = skier.getBounds();
         
         // FIRST: Check ramp collision (priority - launch skier!)
-        // Only check when grounded and not already airborne
         if (!isAirborne && skier.isGrounded) {
             for (const ramp of this.ramps) {
                 if (this.checkRampCollision(bounds, ramp)) {
@@ -232,9 +245,8 @@ export class Terrain {
             }
         }
         
-        // Check obstacle collision - ONLY when on the ground AND not invincible
-        // When airborne or recently landed, skip obstacle collision
-        if (!isAirborne && skier.landingInvincibility <= 0) {
+        // Check obstacle collision - ONLY in adventure mode
+        if (this.gameMode === 'adventure' && !isAirborne && skier.landingInvincibility <= 0) {
             for (const obs of this.obstacles) {
                 if (this.checkObstacleCollision(bounds, obs)) {
                     return {
@@ -250,13 +262,7 @@ export class Terrain {
     
     checkRampCollision(bounds, ramp) {
         // For side-scrolling: ramp comes from right, skier is on left
-        // Check if skier overlaps with the ramp's left edge (where they would hit it)
-        // ramp.y is the ground level, ramp extends upward from there
-        
-        // Check horizontal overlap - skier should be touching the ramp's left portion
         const horizontalOverlap = bounds.right > ramp.x && bounds.left < ramp.x + ramp.width * 0.3;
-        
-        // Check if skier is at ground level (within tolerance)
         const atGroundLevel = bounds.bottom >= this.groundLevel - 20 && bounds.bottom <= this.groundLevel + 20;
         
         return horizontalOverlap && atGroundLevel;
@@ -273,7 +279,6 @@ export class Terrain {
     }
     
     checkObstacleCollision(bounds, obs) {
-        // obs.y is the bottom (ground level), so top is obs.y - obs.height
         const obsTop = obs.y - obs.height;
         const obsBottom = obs.y;
         
@@ -301,5 +306,9 @@ export class Terrain {
     
     getGroundSegments() {
         return this.groundSegments;
+    }
+    
+    getCurrentBiome() {
+        return this.currentBiome;
     }
 }
