@@ -1,7 +1,7 @@
-import { Skier } from './skier.js?v=12';
-import { Terrain } from './terrain.js?v=12';
-import { TrickSystem } from './tricks.js?v=12';
-import { Renderer } from './renderer.js?v=12';
+import { Skier } from './skier.js?v=13';
+import { Terrain } from './terrain.js?v=13';
+import { TrickSystem } from './tricks.js?v=13';
+import { Renderer } from './renderer.js?v=13';
 
 class Game {
     constructor() {
@@ -38,7 +38,11 @@ class Game {
         
         // Input handling
         this.keys = {};
+        this.isMobile = this.detectMobile();
         this.setupInput();
+        if (this.isMobile) {
+            this.setupMobileControls();
+        }
         
         // UI element references
         this.distanceDisplay = document.getElementById('distanceDisplay');
@@ -242,6 +246,130 @@ class Game {
         });
     }
     
+    detectMobile() {
+        return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) 
+            && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    }
+    
+    setupMobileControls() {
+        const jumpBtn = document.getElementById('mobileJumpBtn');
+        const pauseBtn = document.getElementById('mobilePauseBtn');
+        const trickBtns = document.querySelectorAll('[data-trick]');
+        const mobileControls = document.getElementById('mobileControls');
+        
+        // Prevent default touch behavior on the canvas to avoid scrolling
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        // Jump button
+        if (jumpBtn) {
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!this.isRunning || this.isPaused || this.gameOver) return;
+                
+                if (!this.skier.isAirborne) {
+                    this.keys[' '] = true;
+                    this.pendingFlip = true;
+                    
+                    if (!this.tutorialShown.jump) {
+                        this.tutorialShown.jump = true;
+                        this.hideHint('hintJump');
+                    }
+                } else if (this.skier.isAirborne && this.skier.airTime >= this.trickSystem.minAirTimeForTrick) {
+                    // Tapping jump while airborne does a backflip
+                    this.trickSystem.handleInput(' ');
+                }
+            }, { passive: false });
+            
+            jumpBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.keys[' '] = false;
+                this.pendingFlip = false;
+            }, { passive: false });
+        }
+        
+        // Trick buttons
+        trickBtns.forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!this.isRunning || this.isPaused || this.gameOver) return;
+                
+                const trickKey = btn.dataset.trick;
+                if (this.skier.isAirborne) {
+                    this.trickSystem.handleInput(trickKey);
+                    
+                    if (!this.tutorialShown.trick && ['1', '2', '3', '4'].includes(trickKey)) {
+                        this.tutorialShown.trick = true;
+                        this.hideHint('hintTrick');
+                    }
+                }
+            }, { passive: false });
+        });
+        
+        // Pause button
+        if (pauseBtn) {
+            pauseBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.togglePause();
+            }, { passive: false });
+        }
+        
+        // Also handle tap on canvas as jump (for simplicity)
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (!this.isRunning || this.isPaused || this.gameOver) return;
+            
+            // Only use canvas tap for jump if not touching a UI button
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target === this.canvas) {
+                if (!this.skier.isAirborne) {
+                    this.keys[' '] = true;
+                    this.pendingFlip = true;
+                    
+                    if (!this.tutorialShown.jump) {
+                        this.tutorialShown.jump = true;
+                        this.hideHint('hintJump');
+                    }
+                }
+            }
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchend', () => {
+            this.keys[' '] = false;
+            this.pendingFlip = false;
+        });
+    }
+    
+    showMobileControls() {
+        const mobileControls = document.getElementById('mobileControls');
+        const pauseBtn = document.getElementById('mobilePauseBtn');
+        if (this.isMobile) {
+            if (mobileControls) mobileControls.style.display = 'flex';
+            if (pauseBtn) {
+                pauseBtn.style.display = 'flex';
+                pauseBtn.classList.remove('hidden');
+            }
+        }
+    }
+    
+    hideMobileControls() {
+        const mobileControls = document.getElementById('mobileControls');
+        const pauseBtn = document.getElementById('mobilePauseBtn');
+        if (mobileControls) mobileControls.style.display = 'none';
+        if (pauseBtn) {
+            pauseBtn.style.display = 'none';
+            pauseBtn.classList.add('hidden');
+        }
+    }
+    
     togglePause() {
         if (this.gameOver) return;
         this.isPaused = !this.isPaused;
@@ -249,8 +377,10 @@ class Game {
         const pauseOverlay = document.getElementById('pauseOverlay');
         if (this.isPaused) {
             pauseOverlay.classList.remove('hidden');
+            this.hideMobileControls();
         } else {
             pauseOverlay.classList.add('hidden');
+            this.showMobileControls();
         }
     }
     
@@ -271,6 +401,9 @@ class Game {
     start() {
         this.isRunning = true;
         this.lastTime = performance.now();
+        
+        // Show mobile controls
+        this.showMobileControls();
         
         // Show initial tutorial hints
         setTimeout(() => this.showHint('hintJump'), 1000);
@@ -468,6 +601,8 @@ class Game {
     }
     
     showGameOver() {
+        this.hideMobileControls();
+        
         const compliments = [
             "Beautiful Run!", "Flow State Achieved!", "Mountain Master!",
             "Epic Descent!", "Pure Poetry!", "Legendary!",
