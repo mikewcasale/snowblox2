@@ -92,17 +92,18 @@
 </div>
 <div class="flex items-center space-x-6">
 <div class="text-right">
-<span class="text-[10px] uppercase tracking-widest text-slate-400 block font-bold">Meters</span>
-<span class="text-2xl font-display font-semibold text-white">4,812</span>
+<span class="text-[10px] uppercase tracking-widest text-slate-400 block font-bold">Distance</span>
+<span id="distanceDisplay" class="text-2xl font-display font-semibold text-white">0</span><span class="text-sm text-slate-400">m</span>
 </div>
 <button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
 <span class="material-icons text-white">pause</span>
 </button>
 </div>
 </header>
-<main class="relative w-full h-screen overflow-hidden bg-slate-900 flex items-center justify-center">
-<div class="absolute inset-0 z-40 bg-white animate-lightning pointer-events-none"></div>
-<div class="absolute inset-0 z-30 pointer-events-none overflow-hidden opacity-40">
+<main class="relative w-full h-screen overflow-hidden bg-sky-200 flex items-center justify-center">
+<canvas id="gameCanvas" class="absolute inset-0 z-20 w-full h-full"></canvas>
+<div class="absolute inset-0 z-40 bg-white animate-lightning pointer-events-none opacity-20"></div>
+<div class="absolute inset-0 z-30 pointer-events-none overflow-hidden opacity-20">
 <div class="animate-rain absolute" style="left: 10%; top: -50px;"><div class="rain-layer"></div></div>
 <div class="animate-rain absolute" style="left: 25%; top: -100px; animation-delay: 0.1s;"><div class="rain-layer"></div></div>
 <div class="animate-rain absolute" style="left: 45%; top: -20px; animation-delay: 0.2s;"><div class="rain-layer"></div></div>
@@ -112,37 +113,23 @@
 <div class="animate-rain absolute" style="left: 55%; top: 40%; animation-delay: 0.25s;"><div class="rain-layer"></div></div>
 <div class="animate-rain absolute" style="left: 90%; top: 60%; animation-delay: 0.08s;"><div class="rain-layer"></div></div>
 </div>
-<div class="absolute inset-0 z-0 bg-[#1e293b]">
-<div class="absolute inset-0 bg-gradient-to-b from-[#334155] via-[#1e293b] to-[#0f172a]"></div>
-<div class="absolute bottom-1/4 w-full h-1/2 opacity-30 flex items-end">
-<div class="w-1/3 h-[60%] bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
-<div class="w-1/2 h-[80%] -ml-20 bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
-<div class="w-2/5 h-[50%] -ml-40 bg-[#020617]" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+<div class="absolute inset-0 z-0 bg-[#87CEEB]">
+<div class="absolute inset-0 bg-gradient-to-b from-[#B0E0F6] via-[#87CEEB] to-[#6BB6D6]"></div>
+<div class="absolute inset-0" id="starfield"></div>
 </div>
-<div class="absolute inset-0 fog-gradient opacity-60"></div>
+<div class="absolute bottom-12 left-0 right-0 z-50 flex justify-center space-x-6 pointer-events-none">
+<div class="flex flex-col items-center space-y-2 group transition-all duration-300">
+<div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
+<span class="material-icons text-xl">keyboard_arrow_left</span>
 </div>
-<div class="absolute inset-0 z-10 flex items-end justify-center">
-<div class="absolute left-[-5%] bottom-[-10%] w-[60%] h-[70%] bg-[#121a2a] cliff-shadow" style="clip-path: polygon(0 0, 80% 60%, 100% 100%, 0 100%);">
-<div class="absolute top-[59%] left-[80%] w-full h-2 bg-slate-400 opacity-20 transform -rotate-12"></div>
+<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Left</span>
 </div>
-<div class="absolute right-[5%] bottom-[10%] w-[40%] h-[40%] bg-[#0c1221] cliff-shadow opacity-80" style="clip-path: polygon(20% 0, 100% 40%, 100% 100%, 0 100%);"></div>
-<svg class="absolute bottom-[40%] left-0 w-full h-40 opacity-20 pointer-events-none" preserveAspectRatio="none">
-<path d="M-10 20 Q 250 100 500 40 T 1000 80" fill="transparent" stroke="white" stroke-width="1"></path>
-<circle cx="250" cy="80" fill="white" r="2"></circle>
-<circle cx="750" cy="55" fill="white" r="2"></circle>
-</svg>
+<div class="flex flex-col items-center space-y-2 group transition-all duration-300">
+<div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
+<span class="material-icons text-xl">keyboard_arrow_right</span>
 </div>
-<div class="absolute z-20 flex items-center justify-center animate-float" style="left: 45%; bottom: 35%;">
-<div class="relative w-12 h-16 group">
-<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-4 h-10 bg-black rounded-full"></div> 
-<div class="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-black rounded-full"></div> 
-<div class="absolute bottom-0 left-0 w-16 h-1.5 bg-black rounded-full transform -rotate-12"></div> 
-<div class="absolute top-4 left-[-20px] w-12 h-2 bg-primary/80 rounded-full blur-[1px]"></div>
+<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Right</span>
 </div>
-<div class="absolute -left-12 top-4 w-10 h-[1px] bg-white/30 blur-[0.5px]"></div>
-<div class="absolute -left-16 top-8 w-14 h-[1px] bg-white/20 blur-[0.5px]"></div>
-</div>
-<div class="absolute bottom-12 left-0 right-0 z-50 flex justify-center space-x-12 pointer-events-none">
 <div class="flex flex-col items-center space-y-2 group transition-all duration-300">
 <div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
 <span class="material-icons text-xl">keyboard_arrow_up</span>
@@ -150,17 +137,17 @@
 <span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Jump</span>
 </div>
 <div class="flex flex-col items-center space-y-2 group transition-all duration-300">
-<div class="w-12 h-12 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
-<span class="text-xs font-bold">SPACE</span>
+<div class="w-10 h-10 rounded-xl border border-white/20 bg-black/20 backdrop-blur-md flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
+<span class="text-xs font-bold">1-4</span>
 </div>
-<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Trick</span>
+<span class="text-[10px] text-white/40 font-bold tracking-widest uppercase">Tricks</span>
 </div>
 </div>
 </main>
 <aside class="fixed right-8 top-1/2 -translate-y-1/2 z-50 space-y-6 hidden lg:block">
 <div class="flex flex-col items-center space-y-1">
 <div class="w-1 bg-white/10 h-16 rounded-full relative overflow-hidden">
-<div class="absolute top-0 left-0 w-full bg-primary h-1/2 shadow-[0_0_8px_#7dd3fc]"></div>
+<div id="altitudeBar" class="absolute top-0 left-0 w-full bg-primary h-1/2 shadow-[0_0_8px_#7dd3fc]"></div>
 </div>
 <span class="text-[10px] font-bold text-white/30 rotate-90 my-8">ALTITUDE</span>
 </div>
@@ -171,7 +158,7 @@
 </div>
 <div>
 <span class="text-[10px] text-slate-400 block leading-tight font-bold">MULTIPLIER</span>
-<span class="text-lg font-display text-white">x4.5</span>
+<span id="multiplierDisplay" class="text-lg font-display text-white">x1.0</span>
 </div>
 </div>
 <div class="h-px bg-white/5"></div>
@@ -181,7 +168,17 @@
 </div>
 <div>
 <span class="text-[10px] text-slate-400 block leading-tight font-bold">SPEED</span>
-<span class="text-lg font-display text-white">82 <span class="text-[10px] font-sans">km/h</span></span>
+<span id="speedDisplay" class="text-lg font-display text-white">0 <span class="text-[10px] font-sans">km/h</span></span>
+</div>
+</div>
+<div class="h-px bg-white/5"></div>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+<span class="material-icons text-green-500 text-sm">stars</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block leading-tight font-bold">SCORE</span>
+<span id="scoreDisplay" class="text-lg font-display text-white">0</span>
 </div>
 </div>
 </div>
@@ -194,4 +191,93 @@
 <span class="text-sm text-white/40 font-light max-w-xs">Visibility reduced. Lightning activity high in the upper peaks.</span>
 </div>
 
+<div id="startOverlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+<div class="bg-storm-base border border-white/20 rounded-2xl p-8 max-w-lg text-center space-y-6">
+<h1 class="text-5xl font-display font-semibold text-primary">Mountain Storm</h1>
+<h2 class="text-2xl font-display text-white">Downhill Trick Challenge</h2>
+<div class="text-left space-y-2 bg-black/30 p-4 rounded-xl">
+<div class="text-xs text-slate-400 uppercase tracking-wide mb-2">Controls</div>
+<div class="text-sm text-slate-300">
+<span class="font-bold text-primary">Space / ↑:</span> Jump over obstacles
+</div>
+<div class="text-xs text-slate-400 uppercase tracking-wide mt-3 mb-2">Tricks (press while in air)</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="text-sm text-slate-300">
+<span class="font-bold text-amber-400">1:</span> Backflip <span class="text-amber-500">(150pts)</span>
+</div>
+<div class="text-sm text-slate-300">
+<span class="font-bold text-amber-400">2:</span> Frontflip <span class="text-amber-500">(150pts)</span>
+</div>
+<div class="text-sm text-slate-300">
+<span class="font-bold text-amber-400">3:</span> 360 Spin <span class="text-amber-500">(200pts)</span>
+</div>
+<div class="text-sm text-slate-300">
+<span class="font-bold text-amber-400">4:</span> Method Grab <span class="text-amber-500">(100pts)</span>
+</div>
+</div>
+<div class="text-xs text-slate-400 uppercase tracking-wide mt-3 mb-1">Bonuses</div>
+<div class="text-xs text-slate-400">
+Chain multiple tricks • Land clean • Big air time • Build combos!
+</div>
+</div>
+<div class="text-sm text-slate-400 italic">
+Hit ramps to launch! Land tricks for points. Avoid obstacles or jump over them!
+</div>
+<div class="bg-black/30 p-4 rounded-xl">
+<div class="text-xs text-slate-400 uppercase tracking-wide mb-3">Choose Your Skier Color</div>
+<div id="colorPicker" class="flex justify-center gap-3">
+<button type="button" data-color="#7dd3fc" class="skier-color w-10 h-10 rounded-full bg-[#7dd3fc] border-4 border-white shadow-lg transform scale-110" title="Cyan"></button>
+<button type="button" data-color="#f87171" class="skier-color w-10 h-10 rounded-full bg-[#f87171] border-2 border-transparent hover:border-white/50 transition-all" title="Red"></button>
+<button type="button" data-color="#4ade80" class="skier-color w-10 h-10 rounded-full bg-[#4ade80] border-2 border-transparent hover:border-white/50 transition-all" title="Green"></button>
+<button type="button" data-color="#facc15" class="skier-color w-10 h-10 rounded-full bg-[#facc15] border-2 border-transparent hover:border-white/50 transition-all" title="Yellow"></button>
+<button type="button" data-color="#c084fc" class="skier-color w-10 h-10 rounded-full bg-[#c084fc] border-2 border-transparent hover:border-white/50 transition-all" title="Purple"></button>
+<button type="button" data-color="#fb923c" class="skier-color w-10 h-10 rounded-full bg-[#fb923c] border-2 border-transparent hover:border-white/50 transition-all" title="Orange"></button>
+<button type="button" data-color="#f472b6" class="skier-color w-10 h-10 rounded-full bg-[#f472b6] border-2 border-transparent hover:border-white/50 transition-all" title="Pink"></button>
+</div>
+</div>
+<button type="button" id="startBtn" class="w-full py-3 px-6 bg-primary text-slate-900 rounded-xl font-semibold hover:bg-primary/80 transition-colors text-lg">
+Start Game
+</button>
+</div>
+</div>
+
+<script>
+// Generate stars
+window.addEventListener('DOMContentLoaded', () => {
+    const starfield = document.getElementById('starfield');
+    if (starfield) {
+        const numStars = 100;
+        for (let i = 0; i < numStars; i++) {
+            const star = document.createElement('div');
+            star.className = 'absolute rounded-full bg-white';
+            const size = Math.random() * 2 + 1;
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.opacity = Math.random() * 0.5 + 0.5;
+            starfield.appendChild(star);
+        }
+    }
+    
+    // Color picker functionality
+    window.selectedSkierColor = '#7dd3fc'; // Default color
+    const colorButtons = document.querySelectorAll('.skier-color');
+    colorButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove selection from all
+            colorButtons.forEach(b => {
+                b.classList.remove('border-white', 'border-4', 'scale-110', 'shadow-lg');
+                b.classList.add('border-transparent', 'border-2');
+            });
+            // Add selection to clicked
+            btn.classList.remove('border-transparent', 'border-2');
+            btn.classList.add('border-white', 'border-4', 'scale-110', 'shadow-lg');
+            // Store selected color
+            window.selectedSkierColor = btn.dataset.color;
+        });
+    });
+});
+</script>
+<script type="module" src="js/game.js?v=11"></script>
 </body></html>
